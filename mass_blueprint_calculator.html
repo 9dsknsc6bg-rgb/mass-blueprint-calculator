@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mass Blueprint Caloric Surplus Calculator</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        .animate-fade-in { animation: fadeIn 0.6s ease-out; }
+        .animate-fade-in-delay-1 { animation: fadeIn 0.6s ease-out 0.2s both; }
+        .animate-fade-in-delay-2 { animation: fadeIn 0.6s ease-out 0.4s both; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script>
+        const { useState } = React;
+
+        function MassBlueprint() {
+            const [height, setHeight] = useState('5\'10"');
+            const [weight, setWeight] = useState('180');
+            const [age, setAge] = useState('25');
+            const [activityLevel, setActivityLevel] = useState('moderate');
+            const [selectedTier, setSelectedTier] = useState(null);
+            const [expandedTab, setExpandedTab] = useState(null);
+            const [selectedFoods, setSelectedFoods] = useState({
+                1: { protein: 'chicken', carbs: 'whiteRice', fats: 'oliveOil', liquid: 'wheyProtein', meals: 3 },
+                2: { protein: 'chicken', carbs: 'whiteRice', fats: 'oliveOil', liquid: 'wheyProtein', meals: 3 },
+                3: { protein: 'groundBeef', carbs: 'pasta', fats: 'peanutButter', liquid: 'massGainer', meals: 3 },
+                4: { protein: 'steak', carbs: 'oats', fats: 'peanutButter', liquid: 'massGainer', meals: 3 },
+            });
+
+            const heightStringToInches = (h) => {
+                const match = h.match(/(\d+)'(\d+)?/);
+                if (!match) return 70;
+                return parseInt(match[1]) * 12 + (parseInt(match[2]) || 0);
+            };
+
+            const calculateBMR = () => {
+                const heightInches = heightStringToInches(height);
+                const heightCm = heightInches * 2.54;
+                const weightKg = parseInt(weight) * 0.453592;
+                const ageNum = parseInt(age);
+                const bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * ageNum) + 5;
+                return Math.round(bmr);
+            };
+
+            const getActivityMultiplier = () => {
+                const multipliers = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, veryActive: 1.9 };
+                return multipliers[activityLevel] || 1.55;
+            };
+
+            const calculateTDEE = () => Math.round(calculateBMR() * getActivityMultiplier());
+            const tdee = calculateTDEE();
+
+            const foodDatabase = {
+                proteins: {
+                    chicken: { label: 'Chicken Breast', portion: '6 oz', calories: 280, protein: 52 },
+                    groundBeef: { label: 'Ground Beef (85/15)', portion: '6 oz', calories: 320, protein: 48 },
+                    steak: { label: 'Ribeye Steak', portion: '6 oz', calories: 420, protein: 44 },
+                    salmon: { label: 'Salmon Fillet', portion: '6 oz', calories: 400, protein: 42 },
+                    tilapia: { label: 'Tilapia Fillet', portion: '6 oz', calories: 240, protein: 50 },
+                    eggs: { label: 'Whole Eggs (3)', portion: '3 eggs', calories: 210, protein: 18 },
+                    turkeyBreast: { label: 'Turkey Breast', portion: '6 oz', calories: 240, protein: 52 },
+                    cottageCheese: { label: 'Cottage Cheese', portion: '1 cup', calories: 220, protein: 28 },
+                    tuna: { label: 'Canned Tuna (in water)', portion: '6 oz', calories: 180, protein: 42 },
+                },
+                carbs: {
+                    whiteRice: { label: 'White Rice', portion: '1.5 cups cooked', calories: 195, carbs: 43 },
+                    brownRice: { label: 'Brown Rice', portion: '1.5 cups cooked', calories: 215, carbs: 45 },
+                    oats: { label: 'Oats (dry)', portion: '0.75 cup dry', calories: 300, carbs: 54 },
+                    pasta: { label: 'Pasta (cooked)', portion: '2 cups cooked', calories: 400, carbs: 80 },
+                    potato: { label: 'White Potato', portion: '2 large', calories: 370, carbs: 85 },
+                    sweetPotato: { label: 'Sweet Potato', portion: '2 large', calories: 200, carbs: 45 },
+                    bread: { label: 'Whole Wheat Bread', portion: '4 slices', calories: 320, carbs: 60 },
+                    granola: { label: 'Granola', portion: '1 cup', calories: 550, carbs: 66 },
+                    banana: { label: 'Banana', portion: '2 medium', calories: 210, carbs: 54 },
+                },
+                fats: {
+                    oliveOil: { label: 'Olive Oil', portion: '1 tbsp', calories: 120, fat: 14 },
+                    coconutOil: { label: 'Coconut Oil', portion: '1 tbsp', calories: 120, fat: 14 },
+                    butter: { label: 'Butter', portion: '1 tbsp', calories: 100, fat: 11 },
+                    peanutButter: { label: 'Peanut Butter', portion: '2 tbsp', calories: 190, fat: 16 },
+                    almondButter: { label: 'Almond Butter', portion: '2 tbsp', calories: 180, fat: 16 },
+                    avocado: { label: 'Avocado', portion: '1 whole', calories: 240, fat: 22 },
+                    ghee: { label: 'Ghee', portion: '1 tbsp', calories: 120, fat: 14 },
+                },
+                liquids: {
+                    wheyProtein: { label: 'Whey Protein Powder (1 scoop)', portion: '1 scoop', calories: 120, protein: 25 },
+                    massGainer: { label: 'Dymatize Mass Gainer (2 scoops)', portion: '2 scoops', calories: 480, protein: 24, carbs: 85 },
+                }
+            };
+
+            const homeGainerRecipes = [
+                { name: 'Budget Bulk Builder', calories: 1050, ingredients: [{ item: 'Whole Milk', amount: '2 cups', cals: 300 }, { item: 'Oats (dry)', amount: '0.75 cup', cals: 300 }, { item: 'Peanut Butter', amount: '3 tbsp', cals: 285 }, { item: 'Whey Protein Powder', amount: '1 scoop', cals: 120 }, { item: 'Banana', amount: '1 medium', cals: 105 }], macros: { protein: '35g', carbs: '120g', fat: '32g' } },
+                { name: 'Athlete\'s Premium', calories: 1200, ingredients: [{ item: 'Whole Milk', amount: '2.5 cups', cals: 375 }, { item: 'Oats (dry)', amount: '1 cup', cals: 400 }, { item: 'Almond Butter', amount: '2 tbsp', cals: 180 }, { item: 'Whey Protein Powder', amount: '1.5 scoop', cals: 180 }, { item: 'Honey', amount: '2 tbsp', cals: 130 }, { item: 'Banana', amount: '1 medium', cals: 105 }], macros: { protein: '40g', carbs: '155g', fat: '28g' } },
+                { name: 'Max Calorie Shake', calories: 1450, ingredients: [{ item: 'Whole Milk', amount: '3 cups', cals: 450 }, { item: 'Oats (dry)', amount: '1.25 cup', cals: 500 }, { item: 'Peanut Butter', amount: '3 tbsp', cals: 285 }, { item: 'Whey Protein Powder', amount: '1 scoop', cals: 120 }, { item: 'Honey', amount: '1 tbsp', cals: 65 }, { item: 'Banana', amount: '1 medium', cals: 105 }], macros: { protein: '38g', carbs: '170g', fat: '35g' } },
+            ];
+
+            const tiers = [
+                { id: 1, label: 'Slow & Steady', surplus: 250, color: 'from-blue-600 to-blue-700', description: 'Lean gains, minimal fat', projections: { weekly: '0.5 lbs', monthly: '2 lbs', ninetyDays: '6 lbs' } },
+                { id: 2, label: 'Optimal Pace', surplus: 500, color: 'from-emerald-600 to-emerald-700', description: 'Best risk/reward ratio', projections: { weekly: '1 lb', monthly: '4 lbs', ninetyDays: '13 lbs' } },
+                { id: 3, label: 'Aggressive', surplus: 750, color: 'from-amber-600 to-amber-700', description: 'Fast results, more fat gain', projections: { weekly: '1.5 lbs', monthly: '6 lbs', ninetyDays: '19 lbs' } },
+                { id: 4, label: 'Maximum', surplus: 1000, color: 'from-red-600 to-red-700', description: 'Maximum muscle + fat', projections: { weekly: '2 lbs', monthly: '8 lbs', ninetyDays: '26 lbs' } },
+            ];
+
+            const heights = ['5\'6"', '5\'7"', '5\'8"', '5\'9"', '5\'10"', '5\'11"', '6\'0"', '6\'1"', '6\'2"', '6\'3"', '6\'4"', '6\'5"', '6\'6"'];
+
+            const getSelectedFoodDetails = (tierId) => {
+                const foods = selectedFoods[tierId];
+                return { protein: foodDatabase.proteins[foods.protein], carbs: foodDatabase.carbs[foods.carbs], fats: foodDatabase.fats[foods.fats], liquid: foodDatabase.liquids[foods.liquid] };
+            };
+
+            const calculateDailyTarget = (tierId) => tdee + tiers.find(t => t.id === tierId).surplus;
+            const calculatePerMealTarget = (tierId) => Math.round(calculateDailyTarget(tierId) / selectedFoods[tierId].meals);
+
+            const getScaledFoodDetails = (tierId) => {
+                const details = getSelectedFoodDetails(tierId);
+                const perMealTarget = calculatePerMealTarget(tierId);
+                const dailyTarget = calculateDailyTarget(tierId);
+                const mealCount = selectedFoods[tierId].meals;
+                const totalBaseCalories = (details.protein.calories || 0) + (details.carbs.calories || 0) + (details.fats.calories || 0) + (details.liquid.calories || 0);
+                const scale = totalBaseCalories > 0 ? perMealTarget / totalBaseCalories : 1;
+
+                return {
+                    protein: { ...details.protein, scaledPortion: Math.round(parseFloat(details.protein.portion) * scale * 10) / 10, scaledCalories: Math.round(details.protein.calories * scale), scaledProteinAmount: Math.round(details.protein.protein * scale * 10) / 10 },
+                    carbs: { ...details.carbs, scaledPortion: Math.round(parseFloat(details.carbs.portion) * scale * 10) / 10, scaledCalories: Math.round(details.carbs.calories * scale), scaledCarbsAmount: Math.round(details.carbs.carbs * scale * 10) / 10 },
+                    fats: { ...details.fats, scaledPortion: Math.round(parseFloat(details.fats.portion) * scale * 10) / 10, scaledCalories: Math.round(details.fats.calories * scale), scaledFatAmount: Math.round(details.fats.fat * scale * 10) / 10 },
+                    liquid: { ...details.liquid, scaledPortion: Math.round(parseFloat(details.liquid.portion || '1') * scale * 10) / 10, scaledCalories: Math.round(details.liquid.calories * scale), scaledProteinAmount: details.liquid.protein ? Math.round(details.liquid.protein * scale * 10) / 10 : 0, scaledCarbsAmount: details.liquid.carbs ? Math.round(details.liquid.carbs * scale * 10) / 10 : 0 },
+                    perMealTarget, dailyTarget, mealCount,
+                };
+            };
+
+            return React.createElement('div', { className: 'min-h-screen bg-slate-950 text-slate-50 overflow-hidden relative' },
+                React.createElement('div', { className: 'fixed inset-0 opacity-5 pointer-events-none' },
+                    React.createElement('div', { className: 'absolute top-20 left-10 w-96 h-96 bg-emerald-500 rounded-full blur-3xl' }),
+                    React.createElement('div', { className: 'absolute bottom-20 right-10 w-96 h-96 bg-blue-500 rounded-full blur-3xl' })
+                ),
+                React.createElement('div', { className: 'relative z-10 max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8' },
+                    // Header
+                    React.createElement('div', { className: 'mb-16 text-center animate-fade-in' },
+                        React.createElement('h1', { className: 'text-5xl sm:text-6xl font-black mb-4 tracking-tight' }, 'Mass Blueprint Caloric Surplus Calculator'),
+                        React.createElement('p', { className: 'text-lg text-slate-400 max-w-2xl mx-auto' }, 'Precise caloric targets. Customizable meals. Real timelines. Built on your actual body.')
+                    ),
+                    // Input Section
+                    React.createElement('div', { className: 'mb-16 animate-fade-in-delay-1' },
+                        React.createElement('div', { className: 'max-w-2xl mx-auto bg-slate-900 border-2 border-slate-700 rounded-xl p-8' },
+                            React.createElement('h3', { className: 'text-xl font-bold text-slate-50 mb-6' }, 'Your Stats'),
+                            React.createElement('div', { className: 'space-y-6' },
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: 'block text-sm font-bold text-slate-300 mb-2 uppercase tracking-wide' }, 'Height'),
+                                    React.createElement('select', { value: height, onChange: (e) => setHeight(e.target.value), className: 'w-full appearance-none bg-slate-800 border-2 border-slate-700 rounded-lg px-4 py-3 text-lg font-semibold text-slate-50 cursor-pointer hover:border-emerald-500 transition-colors focus:outline-none focus:border-emerald-500' },
+                                        heights.map(h => React.createElement('option', { key: h, value: h, className: 'bg-slate-900' }, h))
+                                    )
+                                ),
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: 'block text-sm font-bold text-slate-300 mb-2 uppercase tracking-wide' }, 'Body Weight (lbs)'),
+                                    React.createElement('input', { type: 'number', value: weight, onChange: (e) => setWeight(e.target.value), className: 'w-full bg-slate-800 border-2 border-slate-700 rounded-lg px-4 py-3 text-lg font-semibold text-slate-50 focus:outline-none focus:border-emerald-500', min: '100', max: '400' })
+                                ),
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: 'block text-sm font-bold text-slate-300 mb-2 uppercase tracking-wide' }, 'Age'),
+                                    React.createElement('input', { type: 'number', value: age, onChange: (e) => setAge(e.target.value), className: 'w-full bg-slate-800 border-2 border-slate-700 rounded-lg px-4 py-3 text-lg font-semibold text-slate-50 focus:outline-none focus:border-emerald-500', min: '15', max: '100' })
+                                ),
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: 'block text-sm font-bold text-slate-300 mb-3 uppercase tracking-wide' }, 'Activity Level'),
+                                    React.createElement('div', { className: 'space-y-2' },
+                                        [{ value: 'sedentary', label: 'Sedentary (little/no exercise)', desc: '1.2x BMR' }, { value: 'light', label: 'Light (1-3 days/week)', desc: '1.38x BMR' }, { value: 'moderate', label: 'Moderate (3-5 days/week gym)', desc: '1.55x BMR' }, { value: 'active', label: 'Active (6-7 days/week)', desc: '1.73x BMR' }, { value: 'veryActive', label: 'Very Active (twice daily)', desc: '1.9x BMR' }].map(opt =>
+                                            React.createElement('button', { key: opt.value, onClick: () => setActivityLevel(opt.value), className: `w-full p-3 rounded-lg text-sm font-semibold text-left transition-all border-2 ${activityLevel === opt.value ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500'}` },
+                                                React.createElement('div', null, opt.label),
+                                                React.createElement('div', { className: `text-xs ${activityLevel === opt.value ? 'text-emerald-100' : 'text-slate-500'}` }, opt.desc)
+                                            )
+                                        )
+                                    )
+                                ),
+                                React.createElement('div', { className: 'bg-gradient-to-r from-emerald-600 to-emerald-700 p-6 rounded-lg border-2 border-emerald-500' },
+                                    React.createElement('div', { className: 'text-emerald-100 text-xs mb-2 uppercase tracking-wide font-bold' }, 'Your Calculated TDEE'),
+                                    React.createElement('div', { className: 'text-4xl font-black text-white mb-2' }, tdee + ' calories/day'),
+                                    React.createElement('div', { className: 'text-emerald-100 text-xs' }, 'This is how much you eat to maintain your current weight. Add the surplus below to gain.')
+                                )
+                            )
+                        )
+                    ),
+                    // Tiers Grid
+                    React.createElement('div', { className: 'grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12' },
+                        tiers.map((tier, idx) =>
+                            React.createElement('div', { key: tier.id, onClick: () => setSelectedTier(tier.id), className: `group relative cursor-pointer transition-all duration-300 transform hover:scale-105 ${selectedTier === tier.id ? 'scale-105' : ''}` },
+                                React.createElement('div', { className: `relative p-6 rounded-xl border-2 border-slate-700 h-full transition-all duration-300 hover:border-slate-500 ${selectedTier === tier.id ? `border-emerald-500 bg-gradient-to-br ${tier.color} bg-opacity-10` : 'bg-slate-900 hover:bg-slate-800'}` },
+                                    React.createElement('div', { className: 'relative z-10' },
+                                        React.createElement('div', { className: 'mb-4' },
+                                            React.createElement('h3', { className: 'text-lg font-bold mb-2' }, tier.label),
+                                            React.createElement('div', { className: 'flex items-baseline gap-1' },
+                                                React.createElement('span', { className: 'text-3xl font-black text-emerald-400' }, '+' + tier.surplus),
+                                                React.createElement('span', { className: 'text-slate-400 text-sm' }, 'cal/day')
+                                            )
+                                        ),
+                                        React.createElement('p', { className: 'text-slate-400 text-sm mb-6' }, tier.description),
+                                        React.createElement('div', { className: 'space-y-3 mb-6 p-4 bg-slate-800 bg-opacity-50 rounded-lg' },
+                                            React.createElement('div', { className: 'flex justify-between items-center text-sm' },
+                                                React.createElement('span', { className: 'text-slate-400' }, 'Per Week'),
+                                                React.createElement('span', { className: 'font-bold text-slate-100' }, tier.projections.weekly)
+                                            ),
+                                            React.createElement('div', { className: 'flex justify-between items-center text-sm' },
+                                                React.createElement('span', { className: 'text-slate-400' }, 'Per Month'),
+                                                React.createElement('span', { className: 'font-bold text-slate-100' }, tier.projections.monthly)
+                                            ),
+                                            React.createElement('div', { className: 'flex justify-between items-center text-sm' },
+                                                React.createElement('span', { className: 'text-slate-400' }, '90 Days'),
+                                                React.createElement('span', { className: 'font-bold text-emerald-400' }, tier.projections.ninetyDays)
+                                            )
+                                        ),
+                                        React.createElement('button', { className: `w-full py-2 px-4 rounded-lg font-semibold transition-all duration-300 text-sm ${selectedTier === tier.id ? `bg-gradient-to-r ${tier.color} text-white` : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}` },
+                                            selectedTier === tier.id ? '✓ Selected' : 'View Plan'
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    ),
+                    // Detail View
+                    selectedTier && tiers.map(tier => selectedTier === tier.id && React.createElement('div', { key: tier.id, className: 'mt-12 animate-fade-in' },
+                        React.createElement('div', { className: 'bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-slate-700 rounded-xl p-8 sm:p-10 overflow-hidden' },
+                            React.createElement('h2', { className: 'text-3xl font-black mb-2' }, tier.label),
+                            React.createElement('p', { className: 'text-slate-400 mb-8' }, `+${tier.surplus} calories daily • ${tier.description.toLowerCase()}`),
+                            // Tabs
+                            React.createElement('div', { className: 'mb-8 border-b border-slate-700 flex gap-2 overflow-x-auto pb-4 no-scrollbar' },
+                                ['foods', 'macro', 'homeGainer', 'timeline'].map(tab =>
+                                    React.createElement('button', { key: tab, onClick: () => setExpandedTab(expandedTab === tab ? null : tab), className: `px-4 py-2 font-semibold text-sm whitespace-nowrap transition-all rounded-lg ${expandedTab === tab ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-300'}` },
+                                        tab === 'foods' ? 'Customize Foods' : tab === 'macro' ? 'Your Meal' : tab === 'homeGainer' ? 'Homemade Gainer' : 'Timeline'
+                                    )
+                                )
+                            ),
+                            // Foods Tab
+                            expandedTab === 'foods' && React.createElement('div', { className: 'space-y-6 mb-8 animate-fade-in' },
+                                ['proteins', 'carbs', 'fats', 'liquids'].map(category => React.createElement('div', { key: category },
+                                    React.createElement('h4', { className: 'text-sm font-bold text-slate-300 mb-3 uppercase tracking-wide' }, category === 'proteins' ? 'Protein Source' : category === 'carbs' ? 'Carb Source' : category === 'fats' ? 'Fat Source' : 'Liquid Calories'),
+                                    React.createElement('div', { className: `grid sm:grid-cols-2 lg:grid-cols-3 gap-2` },
+                                        Object.entries(foodDatabase[category]).map(([key, food]) =>
+                                            React.createElement('button', { key: key, onClick: () => setSelectedFoods({ ...selectedFoods, [selectedTier]: { ...selectedFoods[selectedTier], [category === 'liquids' ? 'liquid' : category.slice(0, -1)]: key } }), className: `p-3 rounded-lg text-sm font-semibold transition-all ${selectedFoods[selectedTier][category === 'liquids' ? 'liquid' : category.slice(0, -1)] === key ? 'bg-emerald-600 text-white border-2 border-emerald-400' : 'bg-slate-800 text-slate-300 border-2 border-slate-700 hover:border-slate-500'}` },
+                                                food.label
+                                            )
+                                        )
+                                    )
+                                ))
+                            ),
+                            // Macro Tab
+                            expandedTab === 'macro' && React.createElement('div', { className: 'space-y-6 mb-8 animate-fade-in' },
+                                React.createElement('div', { className: 'bg-slate-800 bg-opacity-50 p-6 rounded-lg border border-slate-700' },
+                                    React.createElement('h4', { className: 'text-sm font-bold text-slate-300 mb-4 uppercase tracking-wide' }, 'How Many Meals Per Day?'),
+                                    React.createElement('div', { className: 'grid grid-cols-3 sm:grid-cols-6 gap-2' },
+                                        [1, 2, 3, 4, 5, 6].map(mealCount =>
+                                            React.createElement('button', { key: mealCount, onClick: () => setSelectedFoods({ ...selectedFoods, [selectedTier]: { ...selectedFoods[selectedTier], meals: mealCount } }), className: `py-3 px-2 rounded-lg font-bold text-sm transition-all ${selectedFoods[selectedTier].meals === mealCount ? 'bg-emerald-600 text-white border-2 border-emerald-400' : 'bg-slate-700 text-slate-300 border-2 border-slate-600 hover:border-slate-500'}` },
+                                                mealCount + 'x'
+                                            )
+                                        )
+                                    ),
+                                    React.createElement('p', { className: 'text-xs text-slate-400 mt-3' },
+                                        selectedFoods[selectedTier].meals === 1 ? 'One big meal. Most practical for busy guys.' :
+                                        selectedFoods[selectedTier].meals === 2 ? 'Two solid meals. Morning & evening.' :
+                                        selectedFoods[selectedTier].meals === 3 ? 'Three meals. Classic approach. Best balance.' :
+                                        selectedFoods[selectedTier].meals === 4 ? 'Four meals. More frequent. Better digestion.' :
+                                        selectedFoods[selectedTier].meals === 5 ? 'Five meals. Constant feeding. Optimal for gains.' :
+                                        'Six meals. Maximum frequency. Dedication level.'
+                                    )
+                                ),
+                                (() => {
+                                    const scaled = getScaledFoodDetails(selectedTier);
+                                    return React.createElement(React.Fragment, null,
+                                        React.createElement('div', { className: 'bg-gradient-to-r from-emerald-600 to-emerald-700 p-6 rounded-lg' },
+                                            React.createElement('div', { className: 'grid sm:grid-cols-3 gap-4' },
+                                                React.createElement('div', null,
+                                                    React.createElement('div', { className: 'text-emerald-100 text-xs mb-1 uppercase tracking-wide' }, 'Daily Target'),
+                                                    React.createElement('div', { className: 'text-3xl font-black text-white' }, scaled.dailyTarget + ' cal')
+                                                ),
+                                                React.createElement('div', null,
+                                                    React.createElement('div', { className: 'text-emerald-100 text-xs mb-1 uppercase tracking-wide' }, 'Per Meal'),
+                                                    React.createElement('div', { className: 'text-3xl font-black text-white' }, scaled.perMealTarget + ' cal')
+                                                ),
+                                                React.createElement('div', null,
+                                                    React.createElement('div', { className: 'text-emerald-100 text-xs mb-1 uppercase tracking-wide' }, 'Meals'),
+                                                    React.createElement('div', { className: 'text-3xl font-black text-white' }, scaled.mealCount + 'x')
+                                                )
+                                            )
+                                        ),
+                                        React.createElement('div', { className: 'grid md:grid-cols-2 gap-4' },
+                                            ['protein', 'carbs', 'fats', 'liquid'].map(key => {
+                                                const item = scaled[key];
+                                                return React.createElement('div', { key: key, className: 'bg-slate-800 bg-opacity-50 p-5 rounded-lg border border-slate-700' },
+                                                    React.createElement('div', { className: 'text-slate-400 text-sm mb-2 uppercase tracking-wide' }, key.charAt(0).toUpperCase() + key.slice(1)),
+                                                    React.createElement('div', { className: 'text-xl font-bold text-slate-50 mb-2' }, item.label),
+                                                    React.createElement('div', { className: 'space-y-1' },
+                                                        React.createElement('div', { className: 'flex justify-between text-sm' },
+                                                            React.createElement('span', { className: 'text-slate-400' }, 'Portion:'),
+                                                            React.createElement('span', { className: 'text-emerald-400 font-semibold' }, '~' + item.scaledPortion + (key === 'fats' ? ' tbsp' : ''))
+                                                        ),
+                                                        React.createElement('div', { className: 'flex justify-between text-sm' },
+                                                            React.createElement('span', { className: 'text-slate-400' }, 'Calories:'),
+                                                            React.createElement('span', { className: 'text-emerald-400 font-semibold' }, item.scaledCalories + ' cal')
+                                                        ),
+                                                        item.scaledProteinAmount > 0 && React.createElement('div', { className: 'flex justify-between text-sm' },
+                                                            React.createElement('span', { className: 'text-slate-400' }, 'Protein:'),
+                                                            React.createElement('span', { className: 'text-emerald-400 font-semibold' }, item.scaledProteinAmount + 'g')
+                                                        ),
+                                                        item.scaledCarbsAmount > 0 && React.createElement('div', { className: 'flex justify-between text-sm' },
+                                                            React.createElement('span', { className: 'text-slate-400' }, 'Carbs:'),
+                                                            React.createElement('span', { className: 'text-emerald-400 font-semibold' }, item.scaledCarbsAmount + 'g')
+                                                        ),
+                                                        item.scaledFatAmount > 0 && React.createElement('div', { className: 'flex justify-between text-sm' },
+                                                            React.createElement('span', { className: 'text-slate-400' }, 'Fat:'),
+                                                            React.createElement('span', { className: 'text-emerald-400 font-semibold' }, item.scaledFatAmount + 'g')
+                                                        )
+                                                    )
+                                                );
+                                            })
+                                        )
+                                    );
+                                })()
+                            ),
+                            // Homemade Gainer Tab
+                            expandedTab === 'homeGainer' && React.createElement('div', { className: 'space-y-4 mb-8 animate-fade-in' },
+                                React.createElement('p', { className: 'text-slate-400 text-sm mb-4' }, 'Don\'t have money for Dymatize? Mix your own 1000+ calorie shake for pennies.'),
+                                homeGainerRecipes.map((recipe, idx) =>
+                                    React.createElement('div', { key: idx, className: 'bg-slate-800 bg-opacity-50 p-5 rounded-lg border border-slate-700' },
+                                        React.createElement('div', { className: 'flex justify-between items-start mb-4' },
+                                            React.createElement('div', null,
+                                                React.createElement('h5', { className: 'text-lg font-bold text-slate-50' }, recipe.name),
+                                                React.createElement('div', { className: 'text-emerald-400 font-bold text-lg mt-1' }, recipe.calories + ' calories')
+                                            ),
+                                            React.createElement('div', { className: 'text-right text-sm' },
+                                                React.createElement('div', { className: 'text-slate-400' }, 'Macros'),
+                                                React.createElement('div', { className: 'text-slate-200 font-semibold' }, recipe.macros.protein),
+                                                React.createElement('div', { className: 'text-slate-200 font-semibold' }, recipe.macros.carbs),
+                                                React.createElement('div', { className: 'text-slate-200 font-semibold' }, recipe.macros.fat)
+                                            )
+                                        ),
+                                        React.createElement('div', { className: 'space-y-2' },
+                                            recipe.ingredients.map((ing, i) =>
+                                                React.createElement('div', { key: i, className: 'flex justify-between text-sm text-slate-300 bg-slate-900 bg-opacity-50 p-2 rounded' },
+                                                    React.createElement('span', null, ing.item + ' • ' + ing.amount),
+                                                    React.createElement('span', { className: 'text-emerald-400' }, ing.cals + ' cal')
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            ),
+                            // Timeline Tab
+                            expandedTab === 'timeline' && React.createElement('div', { className: 'space-y-4 mb-8 animate-fade-in' },
+                                React.createElement('div', { className: 'grid md:grid-cols-3 gap-4' },
+                                    React.createElement('div', { className: 'bg-slate-800 bg-opacity-50 p-4 rounded-lg border border-slate-700' },
+                                        React.createElement('div', { className: 'text-slate-400 text-sm mb-2' }, 'Weekly Weight Gain'),
+                                        React.createElement('div', { className: 'text-2xl font-bold text-emerald-400' }, tier.projections.weekly),
+                                        React.createElement('div', { className: 'text-xs text-slate-500 mt-2' }, 'If you stick to the plan, this is the expectation.')
+                                    ),
+                                    React.createElement('div', { className: 'bg-slate-800 bg-opacity-50 p-4 rounded-lg border border-slate-700' },
+                                        React.createElement('div', { className: 'text-slate-400 text-sm mb-2' }, 'Monthly Gain'),
+                                        React.createElement('div', { className: 'text-2xl font-bold text-slate-50' }, tier.projections.monthly),
+                                        React.createElement('div', { className: 'text-xs text-slate-500 mt-2' }, 'One month of discipline.')
+                                    ),
+                                    React.createElement('div', { className: 'bg-slate-800 bg-opacity-50 p-4 rounded-lg border border-slate-700' },
+                                        React.createElement('div', { className: 'text-slate-400 text-sm mb-2' }, '90 Day Goal'),
+                                        React.createElement('div', { className: 'text-2xl font-bold text-emerald-400' }, tier.projections.ninetyDays),
+                                        React.createElement('div', { className: 'text-xs text-slate-500 mt-2' }, 'Quarter year transformation.')
+                                    )
+                                ),
+                                React.createElement('div', { className: 'bg-emerald-600 bg-opacity-20 border border-emerald-500 p-6 rounded-lg mt-6' },
+                                    React.createElement('p', { className: 'text-emerald-300 text-sm' },
+                                        React.createElement('span', { className: 'font-semibold block mb-2' }, 'This isn\'t complex. It\'s consistent.'),
+                                        'Pick your tier. Pick your foods. Hit your daily calories. Three months from now you\'ll be unrecognizable.'
+                                    )
+                                )
+                            ),
+                            // Bottom Note
+                            React.createElement('div', { className: 'mt-8 pt-8 border-t border-slate-700' },
+                                React.createElement('p', { className: 'text-slate-400 text-sm' },
+                                    React.createElement('span', { className: 'text-emerald-400 font-semibold' }, 'Real talk: '),
+                                    'The meal plan doesn\'t matter. The caloric surplus does. Eat chicken and rice, steak and potatoes, pasta—pick your poison. The numbers above assume you stick to the daily total. You will get out what you put in.'
+                                )
+                            )
+                        )
+                    )),
+                    // Bottom CTA
+                    React.createElement('div', { className: 'mt-16 text-center pb-8 animate-fade-in-delay-2' },
+                        React.createElement('p', { className: 'text-slate-400 mb-6' }, 'This is your baseline. Now execute.')
+                    )
+                )
+            );
+        }
+
+        ReactDOM.render(React.createElement(MassBlueprint), document.getElementById('root'));
+    </script>
+</body>
+</html>
